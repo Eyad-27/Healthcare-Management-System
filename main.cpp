@@ -30,7 +30,7 @@ int main() {
     Operations ops(fileManager, primaryIndex, secondaryIndex);
 
     // Optionally open files / load indices (left for team members to implement)
-    // fileManager.open("doctors.dat", "appointments.dat");
+    fileManager.open("Doctors.dat", "Appointments.dat");
     // primaryIndex.loadIndex("primary.idx");
     // secondaryIndex.loadIndex("secondary.idx");
 
@@ -83,6 +83,6 @@ int main() {
         }
     }
 
-    // fileManager.close();
+    fileManager.close();
     return 0;
 }
