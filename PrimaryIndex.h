@@ -6,27 +6,29 @@ class PrimaryIndex {
 private:
     struct IndexEntry {
         string key;
-        int rrn;
+        long offset;
+        int length;
         bool deleted;
     };
 
     vector<IndexEntry> index;
+    string dataFilename;
     string indexFilename;
-    list<int> availList;
+    list<pair<long, int>> availList;
     bool testingMode;
 
     int binarySearch(const string& key);
 
 public:
-    PrimaryIndex(const string& filename, bool testing = false)
-        : indexFilename(filename), testingMode(testing) {
+    PrimaryIndex(const string& filename, const string& dataFile, bool testing = false)
+        : indexFilename(filename), dataFilename(dataFile), testingMode(testing) {
         loadIndex(filename);
     }
 
     void loadIndex(const string& filename);
     void saveIndex();
 
-    int search(const string& key);
-    void addEntry(const string& key, int rrn);
+    long search(const string& key);
+    void addEntry(const string& key, const string& record);
     void deleteEntry(const string& key);
 };
