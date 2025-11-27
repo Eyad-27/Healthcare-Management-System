@@ -33,7 +33,6 @@ int main() {
     fileManager.open("Doctors.dat", "Appointments.dat");
     // primaryIndex.loadIndex("primary.idx");
     // secondaryIndex.loadIndex("secondary.idx");
-
     bool running = true;
     while (running) {
         displayMenu();
@@ -47,31 +46,31 @@ int main() {
 
         switch (choice) {
             case 1:
-                ops.handleAddNewDoctor();
+                // ops.handleAddNewDoctor();
                 break;
             case 2:
-                ops.handleAddNewAppointment();
+                // ops.handleAddNewAppointment();
                 break;
             case 3:
-                ops.handleUpdateDoctor();
+                // ops.handleUpdateDoctor();
                 break;
             case 4:
-                ops.handleUpdateAppointmentDate();
+                // ops.handleUpdateAppointmentDate();
                 break;
             case 5:
-                ops.handleDeleteAppointment();
+                // ops.handleDeleteAppointment();
                 break;
             case 6:
-                ops.handleDeleteDoctor();
+                // ops.handleDeleteDoctor();
                 break;
             case 7:
-                ops.handlePrintDoctor();
+                // ops.handlePrintDoctor();
                 break;
             case 8:
-                ops.handlePrintAppointment();
+                // ops.handlePrintAppointment();
                 break;
             case 9:
-                ops.handleQuery();
+                // ops.handleQuery();
                 break;
             case 10:
                 running = false;

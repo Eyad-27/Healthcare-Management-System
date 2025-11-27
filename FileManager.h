@@ -12,14 +12,15 @@ public:
     // Doctor operations
     int addDoctor(Doctor record);
     Doctor getDoctor(int offset);
-    void deleteDoctor(int offset);
+    short deleteDoctor(int offset);
     int updateDoctor(int offset, const Doctor& record);
-
+    void emptyDocAvailList();
     // Appointment operations
     int addAppointment(Appointment record);
     Appointment getAppointment(int offset);
-    void deleteAppointment(int offset);
+    short deleteAppointment(int offset);
     int updateAppointment(int offset, const Appointment& record);
+    void emptyAppAvailList();
 
     // Persist and housekeeping
     void open(const string& doctorsFile, const string& appointmentsFile);

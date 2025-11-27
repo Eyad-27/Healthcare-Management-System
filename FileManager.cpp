@@ -4,7 +4,7 @@ using namespace std;
 
 
 int FileManager::addDoctor(Doctor record) {
-    // if the file didn't open successfully retrun
+    // if the file didn't open successfully return
     if (!doctorsFile.is_open())
         return -1;
 
@@ -34,7 +34,7 @@ Doctor FileManager::getDoctor(int offset) {
 
     doctorsFile.clear();
     // move the read pointer to the offset for direct access
-    doctorsFile.seekg(offset, ios::beg);
+    doctorsFile.seekg(offset + 2, ios::beg);
     // to store the length of the record
     short length;
     doctorsFile.read((char*)&length, sizeof(length));
@@ -55,12 +55,38 @@ Doctor FileManager::getDoctor(int offset) {
     return doctor;
 }
 
-void FileManager::deleteDoctor(int offset) {
-    // TODO: Team Member 1 (File Manager) to implement this.
+short FileManager::deleteDoctor(int offset) {
+
+    doctorsFile.clear();
+    // header of the Avail List
+    short header;
+    doctorsFile.seekg(0, ios::beg);
+    doctorsFile.read((char*)&header, sizeof(header));
+
+    doctorsFile.seekg(offset + 2, ios::beg);
+
+    // Length of the deleted record
+    short length;
+    doctorsFile.read((char*)&length, sizeof(length));
+
+    doctorsFile.seekp(doctorsFile.tellg(), ios::beg);
+    // flag that this record is deleted
+    doctorsFile.write("*", 1);
+    // pointer to the previous deleted record offset
+    doctorsFile.write((char*)&header, sizeof(header));
+
+    // seek to the beginning of the file to modify the avail list header
+    doctorsFile.seekp(0, ios::beg);
+    header = offset;
+    doctorsFile.write((char*)&header, sizeof(header));
+    return header;
+
 }
 
 int FileManager::updateDoctor(int offset, const Doctor& record) {
-    // TODO: Team Member 1 (File Manager) to implement this.
+
+    doctorsFile.clear();
+
     return 0;
 }
 
@@ -95,7 +121,7 @@ int FileManager::addAppointment(Appointment record) {
 Appointment FileManager::getAppointment(int offset) {
     appointmentsFile.clear();
     // move the read pointer to the offset for direct access
-    appointmentsFile.seekg(offset, ios::beg);
+    appointmentsFile.seekg(offset + 2, ios::beg);
     // to store the length of the record
     short length;
     appointmentsFile.read((char*)&length, sizeof(length));
@@ -116,13 +142,49 @@ Appointment FileManager::getAppointment(int offset) {
     return appointment;
 }
 
-void FileManager::deleteAppointment(int offset) {
-    // TODO: Team Member 1 (File Manager) to implement this.
+short FileManager::deleteAppointment(int offset) {
+
+    appointmentsFile.clear();
+    // header of the Avail List
+    short header;
+    appointmentsFile.seekg(0, ios::beg);
+    appointmentsFile.read((char*)&header, sizeof(header));
+
+    appointmentsFile.seekg(offset + 2, ios::beg);
+
+    // Length of the deleted record
+    short length;
+    appointmentsFile.read((char*)&length, sizeof(length));
+
+    appointmentsFile.seekp(doctorsFile.tellg(), ios::beg);
+    // flag that this record is deleted
+    appointmentsFile.write("*", 1);
+    // pointer to the previous deleted record offset
+    appointmentsFile.write((char*)&header, sizeof(header));
+
+    // seek to the beginning of the file to modify the avail list header
+    appointmentsFile.seekp(0, ios::beg);
+    header = offset;
+    appointmentsFile.write((char*)&header, sizeof(header));
+    return header;
 }
 
 int FileManager::updateAppointment(int offset, const Appointment& record) {
     // TODO: Team Member 1 (File Manager) to implement this.
     return 0;
+}
+
+void FileManager::emptyDocAvailList() {
+    doctorsFile.clear();
+    doctorsFile.seekp(0, ios::beg);
+    short header = -1;
+    doctorsFile.write((char*)&header, sizeof(header));
+}
+void FileManager::emptyAppAvailList() {
+    appointmentsFile.clear();
+    appointmentsFile.seekp(0, ios::beg);
+    short header = -1;
+    appointmentsFile.write((char*)&header, sizeof(header));
 }
 
 void FileManager::open(const string& doctorsFile, const string& appointmentsFile) {
