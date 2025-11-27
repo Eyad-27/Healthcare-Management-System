@@ -30,4 +30,6 @@ public:
     vector<string> search(const string &secondaryKey);
     void addEntry(const string &secondaryKey, const string &primaryKey);
     void deleteEntry(const string &secondaryKey, const string &primaryKey);
+
+    SecondaryIndex();
 };

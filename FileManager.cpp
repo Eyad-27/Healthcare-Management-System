@@ -24,10 +24,12 @@ int FileManager::addDoctor(Doctor record) {
     doctorsFile.write((char*)&length, sizeof(length));
 
     doctorsFile.write(newRecord, length);
-    int getPos = doctorsFile.tellp();
+    short offset = doctorsFile.tellp();
+
     delete[] newRecord;
-    // return RRN
-    return getPos / (sizeof(length) + length);
+    // return offset
+    return offset - (sizeof(length) + length);
+
 }
 //  Offset = Current Offset + Size of Length Indicator (2)+ Record Length
 Doctor FileManager::getDoctor(int offset) {

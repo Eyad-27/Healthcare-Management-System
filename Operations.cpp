@@ -21,9 +21,8 @@ void Operations::handleAddNewDoctor() {
     copyToBuf(to_string(id), doc.DoctorID, sizeof(doc.DoctorID));
     copyToBuf(name, doc.DoctorName, sizeof(doc.DoctorName));
     copyToBuf(address, doc.Address, sizeof(doc.Address));
-    int rrn = fm_.addDoctor(doc);
-    pidx_.addEntry(doc.DoctorID, rrn);
-    sidx_.addEntry(name, doc.DoctorID);
+    string recordStr = string(doc.DoctorID) + "|" + string(doc.DoctorName) + "|" + string(doc.Address) + "$";
+    pidx_.addEntry(doc.DoctorID, recordStr);
 }
 
 void Operations::handleAddNewAppointment() {
@@ -40,22 +39,21 @@ void Operations::handleAddNewAppointment() {
     copyToBuf(to_string(appId), app.AppointmentID, sizeof(app.AppointmentID));
     copyToBuf(appDate, app.AppointmentDate, sizeof(app.AppointmentDate));
     copyToBuf(to_string(docId), app.DoctorID, sizeof(app.DoctorID));
-    int rrn = fm_.addAppointment(app);
-    pidx_.addEntry(app.AppointmentID, rrn);
-    sidx_.addEntry(to_string(docId), app.AppointmentID);
+    string recordStr = string(app.AppointmentID) + "|" + string(app.AppointmentDate) + "|" + string(app.DoctorID) + "$";
+    pidx_.addEntry(app.AppointmentID, recordStr);
 }
 
 void Operations::handleDeleteDoctor() {
     string docId;
     cout << "Enter Doctor ID to delete: ";
     cin >> docId;
-    int rrn = pidx_.search(docId);
-    if (rrn < 0) {
+    int getOff = pidx_.search(docId);
+    if (getOff < 0) {
         cout << "Doctor ID not found.\n";
         return;
     }
-    Doctor doc = fm_.getDoctor(rrn);
-    fm_.deleteDoctor(rrn);
+    Doctor doc = fm_.getDoctor(getOff);
+    fm_.deleteDoctor(getOff);
     pidx_.deleteEntry(docId);
     sidx_.deleteEntry(doc.DoctorName, docId);
 
@@ -65,13 +63,13 @@ void Operations::handleDeleteAppointment() {
     string appId;
     cout << "Enter Appointment ID to delete: ";
     cin >> appId;
-    int rrn = pidx_.search(appId);
-    if (rrn < 0) {
+    int getOff = pidx_.search(appId);
+    if (getOff < 0) {
         cout << "Appointment ID not found.\n";
         return;
     }
-    Appointment app = fm_.getAppointment(rrn);
-    fm_.deleteAppointment(rrn);
+    Appointment app = fm_.getAppointment(getOff);
+    fm_.deleteAppointment(getOff);
     pidx_.deleteEntry(appId);
     sidx_.deleteEntry(app.DoctorID, appId);
 }
@@ -84,17 +82,14 @@ void Operations::handleUpdateDoctor() {
     cout << "Enter new Doctor Name: ";
     cin >> newName;
     string docIdStr = to_string(id);
-    int rrn = pidx_.search(docIdStr);
-    if (rrn < 0) {
+    int getOff = pidx_.search(docIdStr);
+    if (getOff < 0) {
         cout << "Doctor ID not found.\n";
         return;
     }
-    Doctor doc = fm_.getDoctor(rrn);
-    string oldName = doc.DoctorName;
+    Doctor doc = fm_.getDoctor(getOff);
     copyToBuf(newName, doc.DoctorName, sizeof(doc.DoctorName));
-    fm_.updateDoctor(rrn, doc);
-    sidx_.deleteEntry(oldName, docIdStr);
-    sidx_.addEntry(newName, docIdStr);
+    fm_.updateDoctor(getOff, doc);
 }
 
 void Operations::handleUpdateAppointmentDate() {
@@ -105,14 +100,15 @@ void Operations::handleUpdateAppointmentDate() {
     cout << "Enter new Appointment Date: ";
     cin >> newDate;
     string appIdStr = to_string(appId);
-    int rrn = pidx_.search(appIdStr);
-    if (rrn < 0) {
+    int getOff = pidx_.search(appIdStr);
+    if (getOff < 0) {
         cout << "Appointment ID not found.\n";
         return;
     }
-    Appointment app = fm_.getAppointment(rrn);
+    Appointment app = fm_.getAppointment(getOff);
     copyToBuf(newDate, app.AppointmentDate, sizeof(app.AppointmentDate));
-    fm_.updateAppointment(rrn, app);
+    fm_.updateAppointment(getOff, app);
+
 }
 
 void Operations::handlePrintDoctor() {
@@ -120,12 +116,12 @@ void Operations::handlePrintDoctor() {
     cout << "Enter Doctor ID to print: ";
     cin >> id;
     string docIdStr = to_string(id);
-    int rrn = pidx_.search(docIdStr);
-    if (rrn < 0) {
+    int getOff = pidx_.search(docIdStr);
+    if (getOff < 0) {
         cout << "Doctor ID not found.\n";
         return;
     }
-    Doctor doc = fm_.getDoctor(rrn);
+    Doctor doc = fm_.getDoctor(getOff);
     cout << "DoctorID: " << doc.DoctorID << " | Name: " << doc.DoctorName << " | Address: " << doc.Address << "\n";
 }
 
@@ -134,12 +130,12 @@ void Operations::handlePrintAppointment() {
     cout << "Enter Appointment ID to print: ";
     cin >> appId;
     string appIdStr = to_string(appId);
-    int rrn = pidx_.search(appIdStr);
-    if (rrn < 0) {
+    int getOff = pidx_.search(appIdStr);
+    if (getOff < 0) {
         cout << "Appointment ID not found.\n";
         return;
     }
-    Appointment app = fm_.getAppointment(rrn);
+    Appointment app = fm_.getAppointment(getOff);
     cout << "AppointmentID: " << app.AppointmentID << " | Date: " << app.AppointmentDate << " | DoctorID: " << app.DoctorID << "\n";
 }
 

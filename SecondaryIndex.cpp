@@ -147,3 +147,7 @@ void SecondaryIndex::deleteEntry(const string& secondaryKey, const string& prima
         }
     }
 }
+
+SecondaryIndex::SecondaryIndex() {
+
+}

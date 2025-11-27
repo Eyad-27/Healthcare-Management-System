@@ -31,4 +31,6 @@ public:
     long search(const string& key);
     void addEntry(const string& key, const string& record);
     void deleteEntry(const string& key);
+
+    PrimaryIndex();
 };

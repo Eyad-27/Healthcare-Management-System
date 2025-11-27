@@ -46,10 +46,10 @@ int main() {
 
         switch (choice) {
             case 1:
-                // ops.handleAddNewDoctor();
+                 ops.handleAddNewDoctor();
                 break;
             case 2:
-                // ops.handleAddNewAppointment();
+                 ops.handleAddNewAppointment();
                 break;
             case 3:
                 // ops.handleUpdateDoctor();

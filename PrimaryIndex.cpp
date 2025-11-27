@@ -131,3 +131,7 @@ void PrimaryIndex::deleteEntry(const string& key) {
 
     cout << "Deleted key '" << key << "'. Offset added to AVAIL LIST." << endl;
 }
+
+PrimaryIndex::PrimaryIndex() {
+
+}
