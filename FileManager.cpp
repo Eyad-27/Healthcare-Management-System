@@ -179,6 +179,16 @@ short FileManager::deleteAppointment(int offset) {
 
 int FileManager::updateAppointment(int offset, const Appointment& record) {
 
+    appointmentsFile.clear();
+    appointmentsFile.seekp(offset + 2, ios::beg);
+    char *newRecord = new char[64];
+    strcpy(newRecord,record.AppointmentID); strcat(newRecord, "|");
+    strcat(newRecord,record.AppointmentDate); strcat(newRecord, "|");
+    strcat(newRecord,record.DoctorID);strcat(newRecord,"$");
+    short length = strlen(newRecord);
+    appointmentsFile.write((char*)&length, sizeof(length));
+    appointmentsFile.write(newRecord, length);
+    delete[] newRecord;
     return 0;
 }
 
