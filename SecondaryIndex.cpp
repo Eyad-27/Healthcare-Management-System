@@ -2,10 +2,30 @@
 using namespace std;
 
 #include "SecondaryIndex.h"
+int SecondaryIndex::binarySearch(const string& secondaryKey) {
+    int left = 0;
+    int right = indexes.size() - 1;
 
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+
+        if (indexes[mid].secondaryKey == secondaryKey) {
+            return mid;
+        } else if (indexes[mid].secondaryKey < secondaryKey) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+
+    return left; // Return insertion point if not found
+}
 
 void SecondaryIndex::loadIndex(const string& filename) {
-    indexHead = nullptr;
+    indexes.clear();
+    availList = stack<int>();
+    nextSlot = 0;
+
     ifstream file(filename);
     if (!file.is_open()) {
         ofstream newFile(filename);
@@ -13,120 +33,117 @@ void SecondaryIndex::loadIndex(const string& filename) {
         return;
     }
 
-    string secondaryKey;
-    string primaryKey;
-
-    while (file >> secondaryKey >> primaryKey) {
-        addEntry(indexHead, secondaryKey, primaryKey);
+    string line;
+    while (getline(file, line)) {
+        stringstream ss(line);
+        SecIndex secIndex;
+        ss >> secIndex.secondaryKey;
+        int pkCount;
+        ss >> pkCount;
+        PKNode* head = nullptr;
+        PKNode* tail = nullptr;
+        for (int i = 0; i < pkCount; ++i) {
+            string primaryKey;
+            ss >> primaryKey;
+            PKNode* newNode = new PKNode{primaryKey, nullptr};
+            if (!head) {
+                head = newNode;
+                tail = newNode;
+            } else {
+                tail->next = newNode;
+                tail = newNode;
+            }
+        }
+        secIndex.head = head;
+        secIndex.slot = nextSlot++;
+        indexes.push_back(secIndex);
     }
     file.close();
-
 }
 
 void SecondaryIndex::saveIndex() {
     ofstream file(indexFilename);
-    SecIndex* curr = indexHead;
-
-    while (curr != nullptr) {
-        SecNode* pkNode = curr->head;
-        while (pkNode != nullptr) {
-            file << curr->secondaryKey << " " << pkNode->primaryKey << endl;
-            pkNode = pkNode->next;
+    for (const auto& secIndex : indexes) {
+        file << secIndex.secondaryKey << " ";
+        // Count primary keys
+        int pkCount = 0;
+        PKNode* curr = secIndex.head;
+        while (curr) {
+            pkCount++;
+            curr = curr->next;
         }
-        curr = curr->next;
+        file << pkCount << " ";
+        // Write primary keys
+        curr = secIndex.head;
+        while (curr) {
+            file << curr->primaryKey << " ";
+            curr = curr->next;
+        }
+        file << endl;
     }
-
     file.close();
 }
 
 vector<string> SecondaryIndex::search(const string& secondaryKey) {
+    int pos = binarySearch(secondaryKey);
     vector<string> primaryKeys;
-    SecIndex* curr = indexHead;
-
-    while (curr != nullptr && curr->secondaryKey < secondaryKey) {
-        curr = curr->next;
-    }
-
-    if (curr != nullptr && curr->secondaryKey == secondaryKey) {
-        SecNode* pkNode = curr->head;
-        while (pkNode != nullptr) {
-            primaryKeys.push_back(to_string(pkNode->primaryKey));
-            pkNode = pkNode->next;
+    if (pos < indexes.size() && indexes[pos].secondaryKey == secondaryKey) {
+        PKNode *curr = indexes[pos].head;
+        while (curr) {
+            primaryKeys.push_back(curr->primaryKey);
+            curr = curr->next;
         }
     }
-
     return primaryKeys;
 }
 
-void SecondaryIndex::addEntry(SecIndex* &head, const string& secondaryKey, const string& primaryKey) {
-    if (head == nullptr) {
-        head = new SecIndex(secondaryKey);
-        head->head = new SecNode(stoi(primaryKey));
+void SecondaryIndex::addEntry(const string& secondaryKey, const string& primaryKey) {
+    int pos = binarySearch(secondaryKey);
+    if (pos < indexes.size() && indexes[pos].secondaryKey == secondaryKey) {
+        PKNode* newNode = new PKNode{primaryKey, nullptr};
+        PKNode *curr = indexes[pos].head;
+        while (curr->next) {
+            curr = curr->next;
+        }
+        curr->next = newNode;
         return;
     }
+    PKNode* newNode = new PKNode{primaryKey, nullptr};
+    SecIndex newSecIndex;
+    newSecIndex.secondaryKey = secondaryKey;
+    newSecIndex.head = newNode;
+    if(!availList.empty()){
+        newSecIndex.slot = availList.top();
+        availList.pop();
 
-    SecIndex* curr = head;
-    SecIndex* prev = nullptr;
-
-    while (curr != nullptr && curr->secondaryKey < secondaryKey) {
-        prev = curr;
-        curr = curr->next;
+    }else{
+        newSecIndex.slot = nextSlot++;
     }
-
-    if (curr != nullptr && curr->secondaryKey == secondaryKey) {
-        SecNode* pkNode = new SecNode(stoi(primaryKey));
-        pkNode->next = curr->head;
-        curr->head = pkNode;
-    } else {
-        SecIndex* newIndex = new SecIndex(secondaryKey);
-        newIndex->head = new SecNode(stoi(primaryKey));
-        if (prev == nullptr) {
-            newIndex->next = head;
-            head = newIndex;
-        } else {
-            newIndex->next = curr;
-            prev->next = newIndex;
-        }
-    }
-
+    indexes.insert(indexes.begin() + pos, newSecIndex);
 }
 
-void SecondaryIndex::deleteEntry(SecIndex* &head, const string& secondaryKey, const string& primaryKey) {
-    SecIndex* curr = head;
-    SecIndex* prev = nullptr;
-
-    while (curr != nullptr && curr->secondaryKey < secondaryKey) {
-        prev = curr;
-        curr = curr->next;
-    }
-
-    if (curr != nullptr && curr->secondaryKey == secondaryKey) {
-        SecNode* pkCurr = curr->head;
-        SecNode* pkPrev = nullptr;
-        int pkToDelete = stoi(primaryKey);
-
-        while (pkCurr != nullptr && pkCurr->primaryKey != pkToDelete) {
-            pkPrev = pkCurr;
-            pkCurr = pkCurr->next;
-        }
-
-        if (pkCurr != nullptr) {
-            if (pkPrev == nullptr) {
-                curr->head = pkCurr->next;
-            } else {
-                pkPrev->next = pkCurr->next;
-            }
-            delete pkCurr;
-
-            if (curr->head == nullptr) {
-                if (prev == nullptr) {
-                    head = curr->next;
-                } else {
+void SecondaryIndex::deleteEntry(const string& secondaryKey, const string& primaryKey) {
+    int pos = binarySearch(secondaryKey);
+    if (pos < indexes.size() && indexes[pos].secondaryKey == secondaryKey) {
+        PKNode *curr = indexes[pos].head;
+        PKNode *prev = nullptr;
+        while (curr) {
+            if (curr->primaryKey == primaryKey) {
+                if (prev) {
                     prev->next = curr->next;
+                } else {
+                    indexes[pos].head = curr->next;
                 }
                 delete curr;
+                break;
             }
+            prev = curr;
+            curr = curr->next;
+        }
+        // If no more primary keys, remove the secondary index entry
+        if (!indexes[pos].head) {
+            availList.push(indexes[pos].slot);
+            indexes.erase(indexes.begin() + pos);
         }
     }
-
 }

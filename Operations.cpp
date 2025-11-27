@@ -9,35 +9,138 @@ Operations::Operations(FileManager& fm, PrimaryIndex& pidx, SecondaryIndex& sidx
     : fm_(fm), pidx_(pidx), sidx_(sidx) {}
 
 void Operations::handleAddNewDoctor() {
-    // TODO: Team Member 4 (CRUD Logic) to implement this.
+    int id;
+    string name, address;
+    cout << "Enter Doctor ID: ";
+    cin >> id;
+    cout << "Enter Doctor Name: ";
+    cin >> name;
+    cout << "Enter Doctor Address: ";
+    cin >> address;
+    Doctor doc;
+    copyToBuf(to_string(id), doc.DoctorID, sizeof(doc.DoctorID));
+    copyToBuf(name, doc.DoctorName, sizeof(doc.DoctorName));
+    copyToBuf(address, doc.Address, sizeof(doc.Address));
+    int rrn = fm_.addDoctor(doc);
+    pidx_.addEntry(doc.DoctorID, rrn);
+    sidx_.addEntry(name, doc.DoctorID);
 }
 
 void Operations::handleAddNewAppointment() {
-    // TODO: Team Member 4 (CRUD Logic) to implement this.
+    int appId;
+    string appDate;
+    int docId;
+    cout << "Enter Appointment ID: ";
+    cin >> appId;
+    cout << "Enter Appointment Date: ";
+    cin >> appDate;
+    cout << "Enter Doctor ID: ";
+    cin >> docId;
+    Appointment app;
+    copyToBuf(to_string(appId), app.AppointmentID, sizeof(app.AppointmentID));
+    copyToBuf(appDate, app.AppointmentDate, sizeof(app.AppointmentDate));
+    copyToBuf(to_string(docId), app.DoctorID, sizeof(app.DoctorID));
+    int rrn = fm_.addAppointment(app);
+    pidx_.addEntry(app.AppointmentID, rrn);
+    sidx_.addEntry(to_string(docId), app.AppointmentID);
 }
 
 void Operations::handleDeleteDoctor() {
-    // TODO: Team Member 4 (CRUD Logic) to implement this.
+    string docId;
+    cout << "Enter Doctor ID to delete: ";
+    cin >> docId;
+    int rrn = pidx_.search(docId);
+    if (rrn < 0) {
+        cout << "Doctor ID not found.\n";
+        return;
+    }
+    Doctor doc = fm_.getDoctor(rrn);
+    fm_.deleteDoctor(rrn);
+    pidx_.deleteEntry(docId);
+    sidx_.deleteEntry(doc.DoctorName, docId);
+
 }
 
 void Operations::handleDeleteAppointment() {
-    // TODO: Team Member 4 (CRUD Logic) to implement this.
+    string appId;
+    cout << "Enter Appointment ID to delete: ";
+    cin >> appId;
+    int rrn = pidx_.search(appId);
+    if (rrn < 0) {
+        cout << "Appointment ID not found.\n";
+        return;
+    }
+    Appointment app = fm_.getAppointment(rrn);
+    fm_.deleteAppointment(rrn);
+    pidx_.deleteEntry(appId);
+    sidx_.deleteEntry(app.DoctorID, appId);
 }
 
 void Operations::handleUpdateDoctor() {
-    // TODO: Team Member 4 (CRUD Logic) to implement this.
+    int id;
+    string newName;
+    cout << "Enter Doctor ID to update: ";
+    cin >> id;
+    cout << "Enter new Doctor Name: ";
+    cin >> newName;
+    string docIdStr = to_string(id);
+    int rrn = pidx_.search(docIdStr);
+    if (rrn < 0) {
+        cout << "Doctor ID not found.\n";
+        return;
+    }
+    Doctor doc = fm_.getDoctor(rrn);
+    string oldName = doc.DoctorName;
+    copyToBuf(newName, doc.DoctorName, sizeof(doc.DoctorName));
+    fm_.updateDoctor(rrn, doc);
+    sidx_.deleteEntry(oldName, docIdStr);
+    sidx_.addEntry(newName, docIdStr);
 }
 
 void Operations::handleUpdateAppointmentDate() {
-    // TODO: Team Member 4 (CRUD Logic) to implement this.
+    int appId;
+    string newDate;
+    cout << "Enter Appointment ID to update: ";
+    cin >> appId;
+    cout << "Enter new Appointment Date: ";
+    cin >> newDate;
+    string appIdStr = to_string(appId);
+    int rrn = pidx_.search(appIdStr);
+    if (rrn < 0) {
+        cout << "Appointment ID not found.\n";
+        return;
+    }
+    Appointment app = fm_.getAppointment(rrn);
+    copyToBuf(newDate, app.AppointmentDate, sizeof(app.AppointmentDate));
+    fm_.updateAppointment(rrn, app);
 }
 
 void Operations::handlePrintDoctor() {
-    // TODO: Team Member 4 (CRUD Logic) to implement this.
+    int id;
+    cout << "Enter Doctor ID to print: ";
+    cin >> id;
+    string docIdStr = to_string(id);
+    int rrn = pidx_.search(docIdStr);
+    if (rrn < 0) {
+        cout << "Doctor ID not found.\n";
+        return;
+    }
+    Doctor doc = fm_.getDoctor(rrn);
+    cout << "DoctorID: " << doc.DoctorID << " | Name: " << doc.DoctorName << " | Address: " << doc.Address << "\n";
 }
 
 void Operations::handlePrintAppointment() {
-    // TODO: Team Member 4 (CRUD Logic) to implement this.
+    int appId;
+    cout << "Enter Appointment ID to print: ";
+    cin >> appId;
+    string appIdStr = to_string(appId);
+    int rrn = pidx_.search(appIdStr);
+    if (rrn < 0) {
+        cout << "Appointment ID not found.\n";
+        return;
+    }
+    Appointment app = fm_.getAppointment(rrn);
+    cout << "AppointmentID: " << app.AppointmentID << " | Date: " << app.AppointmentDate << " | DoctorID: " << app.DoctorID << "\n";
 }
 
 static string trim(const string& s) {
