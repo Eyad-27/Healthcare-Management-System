@@ -86,7 +86,15 @@ short FileManager::deleteDoctor(int offset) {
 int FileManager::updateDoctor(int offset, const Doctor& record) {
 
     doctorsFile.clear();
-
+    doctorsFile.seekp(offset + 2, ios::beg);
+    char *newRecord = new char[79];
+    strcpy(newRecord,record.DoctorID); strcat(newRecord, "|");
+    strcat(newRecord,record.DoctorName); strcat(newRecord, "|");
+    strcat(newRecord,record.Address);strcat(newRecord,"$");
+    short length = strlen(newRecord);
+    doctorsFile.write((char*)&length, sizeof(length));
+    doctorsFile.write(newRecord, length);
+    delete[] newRecord;
     return 0;
 }
 
@@ -170,7 +178,7 @@ short FileManager::deleteAppointment(int offset) {
 }
 
 int FileManager::updateAppointment(int offset, const Appointment& record) {
-    // TODO: Team Member 1 (File Manager) to implement this.
+
     return 0;
 }
 
