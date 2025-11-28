@@ -3,75 +3,72 @@ using namespace std;
 #include "PrimaryIndex.h"
 
 void testPrimaryIndex() {
-    cout << "=== Testing Primary Index Implementation ===" << endl << endl;
+    cout << "=== Testing Primary Index ===\n\n";
 
-    // ------------------ Test Doctors ------------------
-    PrimaryIndex doctorsIndex("doctors_primary_index.txt", "doctors_data.txt", true);
+    // ------------------ Test Doctors Index ------------------
+    PrimaryIndex doctorsIndex("doctors_primary_index.txt");
 
-    // Add test entries
-    doctorsIndex.addEntry("D001", "D001|Dr. Alice|Cardiology");
-    doctorsIndex.addEntry("D003", "D003|Dr. Bob|Neurology");
-    doctorsIndex.addEntry("D002", "D002|Dr. Carol|Pediatrics");
-    doctorsIndex.addEntry("D005", "D005|Dr. Eve|Dermatology");
-    doctorsIndex.addEntry("D004", "D004|Dr. Frank|Oncology");
+    // Add entries (using dummy offsets)
+    cout << "Adding doctor entries...\n";
+    doctorsIndex.addEntry("D001", 0);
+    doctorsIndex.addEntry("D003", 1);
+    doctorsIndex.addEntry("D002", 2);
+    doctorsIndex.addEntry("D005", 3);
+    doctorsIndex.addEntry("D004", 4);
 
-    cout << endl;
-
-    // Test search operations
-    cout << "Searching D002..." << endl;
+    // Test search
+    cout << "\nSearching for D002...\n";
     long offset = doctorsIndex.search("D002");
     if (offset != -1) cout << "Found D002 at offset: " << offset << endl;
     else cout << "D002 not found!" << endl;
 
+    cout << "Searching for D999...\n";
     offset = doctorsIndex.search("D999");
     if (offset != -1) cout << "Found D999 at offset: " << offset << endl;
     else cout << "D999 not found (as expected)!" << endl;
 
-    cout << endl << "Testing duplicate entry prevention..." << endl;
-    doctorsIndex.addEntry("D001", "D001|Duplicate|Test"); // Should show error
+    // Test duplicate prevention
+    cout << "\nTesting duplicate entry prevention...\n";
+    if (!doctorsIndex.addEntry("D001", 5))
+        cout << "Duplicate D001 not added (correct)\n";
 
-    cout << endl << "Testing delete operations..." << endl;
-    doctorsIndex.deleteEntry("D003"); // Delete an existing key
-    doctorsIndex.deleteEntry("D999"); // Attempt to delete non-existent key
+    // Test deletion
+    cout << "\nDeleting D003...\n";
+    if (doctorsIndex.deleteEntry("D003"))
+        cout << "D003 marked as deleted\n";
+    if (!doctorsIndex.deleteEntry("D999"))
+        cout << "D999 does not exist (cannot delete)\n";
 
-    cout << endl << "Testing AVAIL LIST reuse..." << endl;
-    doctorsIndex.addEntry("D006", "D006|Dr. Grace|Orthopedics"); // Should reuse D003's offset
-
+    // Save index
     doctorsIndex.saveIndex();
+    cout << "\nDoctors index saved.\n";
 
-    cout << endl << "=== Doctors Testing Complete ===" << endl << endl;
+    // ------------------ Test Appointments Index ------------------
+    PrimaryIndex appointmentsIndex("appointments_primary_index.txt");
 
-    // ------------------ Test Appointments ------------------
-    cout << "=== Testing Appointments Primary Index ===" << endl << endl;
-    PrimaryIndex appointmentsIndex("appointments_primary_index.txt", "appointments_data.txt", true);
+    // Add entries (dummy offsets)
+    cout << "\nAdding appointment entries...\n";
+    appointmentsIndex.addEntry("A001", 0);
+    appointmentsIndex.addEntry("A002", 1);
+    appointmentsIndex.addEntry("A003", 2);
+    appointmentsIndex.addEntry("A004", 3);
+    appointmentsIndex.addEntry("A005", 4);
 
-    // Add test appointments
-    appointmentsIndex.addEntry("A001", "A001|D001|2025-11-28|10:00");
-    appointmentsIndex.addEntry("A002", "A002|D002|2025-11-28|11:00");
-    appointmentsIndex.addEntry("A003", "A003|D001|2025-11-29|09:00");
-    appointmentsIndex.addEntry("A004", "A004|D003|2025-11-29|14:00");
-    appointmentsIndex.addEntry("A005", "A005|D002|2025-11-30|12:00");
-
-    cout << endl << "Searching A003..." << endl;
+    // Search appointments
+    cout << "\nSearching for A003...\n";
     offset = appointmentsIndex.search("A003");
     if (offset != -1) cout << "Found A003 at offset: " << offset << endl;
     else cout << "A003 not found!" << endl;
 
-    cout << "Searching A999..." << endl;
-    offset = appointmentsIndex.search("A999");
-    if (offset != -1) cout << "Found A999 at offset: " << offset << endl;
-    else cout << "A999 not found (as expected)!" << endl;
-
-    cout << endl << "Testing delete operations on appointments..." << endl;
-    appointmentsIndex.deleteEntry("A002"); // Delete an existing appointment
-    appointmentsIndex.deleteEntry("A999"); // Attempt to delete non-existent appointment
-
-    cout << endl << "Testing AVAIL LIST reuse on appointments..." << endl;
-    appointmentsIndex.addEntry("A006", "A006|D003|2025-12-01|15:00"); // Should reuse A002's offset
+    // Delete test
+    cout << "\nDeleting A002...\n";
+    if (appointmentsIndex.deleteEntry("A002"))
+        cout << "A002 marked as deleted\n";
 
     appointmentsIndex.saveIndex();
+    cout << "\nAppointments index saved.\n";
 
-    cout << endl << "=== Appointments Testing Complete ===" << endl;
+    cout << "\n=== Testing Complete ===\n";
 }
 
 int main() {
@@ -80,4 +77,3 @@ int main() {
     cin.get();
     return 0;
 }
-

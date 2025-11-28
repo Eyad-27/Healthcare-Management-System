@@ -7,30 +7,23 @@ private:
     struct IndexEntry {
         string key;
         long offset;
-        int length;
         bool deleted;
     };
 
     vector<IndexEntry> index;
-    string dataFilename;
     string indexFilename;
-    list<pair<long, int>> availList;
-    bool testingMode;
 
     int binarySearch(const string& key);
 
 public:
-    PrimaryIndex(const string& filename, const string& dataFile, bool testing = false)
-        : indexFilename(filename), dataFilename(dataFile), testingMode(testing) {
-        loadIndex(filename);
-    }
+    PrimaryIndex(const string& filename);
 
-    void loadIndex(const string& filename);
+    void loadIndex();
     void saveIndex();
 
     long search(const string& key);
-    void addEntry(const string& key, const string& record);
-    void deleteEntry(const string& key);
+    bool addEntry(const string& key, long offset);
+    bool deleteEntry(const string& key);
 
     PrimaryIndex();
 };

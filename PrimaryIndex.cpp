@@ -1,137 +1,119 @@
 #include "PrimaryIndex.h"
 
-// ------------------------- Binary Search -------------------------
-int PrimaryIndex::binarySearch(const string& key) {
-    int left = 0;
-    int right = index.size() - 1;
-
-    while (left <= right) {
-        int mid = left + (right - left) / 2;
-        if (index[mid].key == key && !index[mid].deleted) return mid;
-        else if (index[mid].key < key) left = mid + 1;
-        else right = mid - 1;
-    }
-
-    return -1;
+//--------------------------------------------------------
+// Constructor — loads existing index file
+//--------------------------------------------------------
+PrimaryIndex::PrimaryIndex(const string& filename)
+    : indexFilename(filename) {
+    loadIndex();
 }
 
-// ------------------------- Load Index -------------------------
-void PrimaryIndex::loadIndex(const string& filename) {
+//--------------------------------------------------------
+// Load index from file
+//--------------------------------------------------------
+void PrimaryIndex::loadIndex() {
     index.clear();
-    availList.clear();
 
-    if (testingMode) {
-        ofstream clearFile(filename, ios::trunc);
-        clearFile.close();
-    }
-
-    ifstream file(filename);
-    if (!file.is_open()) {
-        ofstream newFile(filename);
-        newFile.close();
-        return;
-    }
+    ifstream file(indexFilename);
+    if (!file.is_open()) return;
 
     string key;
     long offset;
-    int length;
     char delMarker;
 
-    while (file >> key >> offset >> length >> delMarker) {
+    while (file >> key >> offset >> delMarker) {
         bool isDeleted = (delMarker == '*');
-        index.push_back({key, offset, length, isDeleted});
-        if (isDeleted) availList.push_back({offset, length});
+        index.push_back({key, offset, isDeleted});
     }
 
     file.close();
 
-    sort(index.begin(), index.end(), [](const auto &a, const auto &b){
+    // Sort the index by key
+    sort(index.begin(), index.end(), [](const IndexEntry& a, const IndexEntry& b) {
         return a.key < b.key;
     });
 }
 
-// ------------------------- Save Index -------------------------
+//--------------------------------------------------------
+// Save index to file
+//--------------------------------------------------------
 void PrimaryIndex::saveIndex() {
-    ofstream file(indexFilename);
-    for (const auto& entry : index) {
-        file << entry.key << " " << entry.offset << " " << entry.length
-             << " " << (entry.deleted ? "*" : "-") << endl;
+    ofstream file(indexFilename, ios::trunc);
+
+    for (auto& entry : index) {
+        file << entry.key << " " << entry.offset << " "
+             << (entry.deleted ? "*" : "-") << endl;
     }
+
     file.close();
 }
 
-// ------------------------- Search -------------------------
-long PrimaryIndex::search(const string& key) {
-    int pos = binarySearch(key);
-    if (pos != -1) return index[pos].offset;
+//--------------------------------------------------------
+// Binary Search
+//--------------------------------------------------------
+int PrimaryIndex::binarySearch(const string& key) {
+    int left = 0, right = index.size() - 1;
+
+    while (left <= right) {
+        int mid = (left + right) / 2;
+
+        if (index[mid].key == key)
+            return mid;
+
+        if (index[mid].key < key)
+            left = mid + 1;
+        else
+            right = mid - 1;
+    }
+
     return -1;
 }
 
-// ------------------------- Add Entry -------------------------
-void PrimaryIndex::addEntry(const string& key, const string& record) {
-    if (search(key) != -1) {
-        cout << "Error: Key '" << key << "' already exists!" << endl;
-        return;
-    }
+//--------------------------------------------------------
+// Search (returns offset, or -1 if not found or deleted)
+//--------------------------------------------------------
+long PrimaryIndex::search(const string& key) {
+    int pos = binarySearch(key);
 
-    fstream file(dataFilename, ios::in | ios::out | ios::binary);
-    if (!file.is_open()) {
-        file.open(dataFilename, ios::out | ios::binary);
-        file.close();
-        file.open(dataFilename, ios::in | ios::out | ios::binary);
-    }
+    if (pos != -1 && !index[pos].deleted)
+        return index[pos].offset;
 
-    long writeOffset = 0;
-    int recordLength = record.size() + 1; // include newline
-
-    // Try to reuse a deleted record space that fits
-    bool reused = false;
-    for (auto it = availList.begin(); it != availList.end(); ++it) {
-        if (it->second >= recordLength) { // space is large enough
-            writeOffset = it->first;
-            availList.erase(it);
-            file.seekp(writeOffset);
-            reused = true;
-            cout << "Reused deleted record space at offset " << writeOffset << endl;
-            break;
-        }
-    }
-
-    if (!reused) { // append to end
-        file.seekp(0, ios::end);
-        writeOffset = file.tellp();
-        cout << "Added new record at offset " << writeOffset << endl;
-    }
-
-    string recordWithMarker = record + "\n";
-    file.write(recordWithMarker.c_str(), recordWithMarker.size());
-    file.close();
-
-    index.push_back({key, writeOffset, recordLength, false});
-    sort(index.begin(), index.end(), [](const auto &a, const auto &b){
-        return a.key < b.key;
-    });
+    return -1;
 }
 
-// ------------------------- Delete Entry -------------------------
-void PrimaryIndex::deleteEntry(const string& key) {
+//--------------------------------------------------------
+// Add new entry (only stores key + offset)
+//--------------------------------------------------------
+bool PrimaryIndex::addEntry(const string& key, long offset) {
+    // Check if already exists
     int pos = binarySearch(key);
-    if (pos == -1) {
-        cout << "Warning: Key '" << key << "' not found!" << endl;
-        return;
-    }
+    if (pos != -1 && !index[pos].deleted)
+        return false; // duplicate
+
+    index.push_back({key, offset, false});
+
+    // Keep index sorted
+    sort(index.begin(), index.end(), [](const IndexEntry& a, const IndexEntry& b) {
+        return a.key < b.key;
+    });
+
+    return true;
+}
+
+//--------------------------------------------------------
+// Delete entry (mark as deleted)
+//--------------------------------------------------------
+bool PrimaryIndex::deleteEntry(const string& key) {
+    int pos = binarySearch(key);
+    if (pos == -1)
+        return false;
 
     index[pos].deleted = true;
-    availList.push_back({index[pos].offset, index[pos].length});
+    return true;
 
-    fstream file(dataFilename, ios::in | ios::out | ios::binary);
-    file.seekp(index[pos].offset);
-    file.put('*'); // mark as deleted
-    file.close();
-
-    cout << "Deleted key '" << key << "'. Offset added to AVAIL LIST." << endl;
 }
 
 PrimaryIndex::PrimaryIndex() {
-
 }
+
+
