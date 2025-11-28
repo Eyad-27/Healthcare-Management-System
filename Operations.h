@@ -11,7 +11,11 @@ using namespace std;
 class Operations {
 public:
     // Construct with system components (stubs will be called for now)
-    Operations(FileManager& fm, PrimaryIndex& pidx, SecondaryIndex& sidx);
+    Operations(FileManager& fm,
+               PrimaryIndex& drsPrim,
+               PrimaryIndex& aptsPrim,
+               SecondaryIndex& drsSec,
+               SecondaryIndex& aptsSec);
 
     void handleAddNewDoctor();
     void handleAddNewAppointment();
@@ -29,8 +33,10 @@ public:
 
 private:
     FileManager& fm_;
-    PrimaryIndex& pidx_;
-    SecondaryIndex& sidx_;
+    PrimaryIndex& drsPidx_;
+    PrimaryIndex& aptsPidx_;
+    SecondaryIndex& drsSidx_;
+    SecondaryIndex& aptsSidx_;
 
     static void copyToBuf(const string& src, char* dst, size_t dstSize);
 };

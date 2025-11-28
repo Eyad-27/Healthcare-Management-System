@@ -4,8 +4,8 @@ using namespace std;
 #include "Operations.h"
 
 
-Operations::Operations(FileManager& fm, PrimaryIndex& pidx, SecondaryIndex& sidx)
-    : fm_(fm), pidx_(pidx), sidx_(sidx) {}
+Operations::Operations(FileManager& fm, PrimaryIndex& drsPrim, PrimaryIndex& aptsPrim, SecondaryIndex& drsSec, SecondaryIndex& aptsSec)
+    : fm_(fm), drsPidx_(drsPrim), aptsPidx_(aptsPrim), drsSidx_(drsSec), aptsSidx_(aptsSec) {}
 
 void Operations::handleAddNewDoctor() {
     int id;
@@ -16,12 +16,21 @@ void Operations::handleAddNewDoctor() {
     cin >> name;
     cout << "Enter Doctor Address: ";
     cin >> address;
-    Doctor doc;
+    Doctor doc{};
     copyToBuf(to_string(id), doc.DoctorID, sizeof(doc.DoctorID));
     copyToBuf(name, doc.DoctorName, sizeof(doc.DoctorName));
     copyToBuf(address, doc.Address, sizeof(doc.Address));
-    string recordStr = string(doc.DoctorID) + "|" + string(doc.DoctorName) + "|" + string(doc.Address) + "$";
-    pidx_.addEntry(doc.DoctorID, recordStr);
+    long offset = fm_.addDoctor(doc);
+    if (drsPidx_.addEntry(doc.DoctorID, offset)) {
+        // Secondary keys for doctors (name, address -> DoctorID)
+        drsSidx_.addEntry(doc.DoctorName, doc.DoctorID);
+        drsSidx_.addEntry(doc.Address, doc.DoctorID);
+        cout << "[OK] Doctor added. ID=" << doc.DoctorID << " Offset=" << offset << "\n";
+        drsPidx_.saveIndex();
+        drsSidx_.saveIndex();
+    } else {
+        cout << "[FAIL] Doctor ID already exists.\n";
+    }
 }
 
 void Operations::handleAddNewAppointment() {
@@ -34,43 +43,59 @@ void Operations::handleAddNewAppointment() {
     cin >> appDate;
     cout << "Enter Doctor ID: ";
     cin >> docId;
-    Appointment app;
+    Appointment app{};
     copyToBuf(to_string(appId), app.AppointmentID, sizeof(app.AppointmentID));
     copyToBuf(appDate, app.AppointmentDate, sizeof(app.AppointmentDate));
     copyToBuf(to_string(docId), app.DoctorID, sizeof(app.DoctorID));
-    string recordStr = string(app.AppointmentID) + "|" + string(app.AppointmentDate) + "|" + string(app.DoctorID) + "$";
-    pidx_.addEntry(app.AppointmentID, recordStr);
+    long offset = fm_.addAppointment(app);
+    if (aptsPidx_.addEntry(app.AppointmentID, offset)) {
+        // Secondary keys for appointments (DoctorID, Date -> AppointmentID)
+        aptsSidx_.addEntry(app.DoctorID, app.AppointmentID);
+        aptsSidx_.addEntry(app.AppointmentDate, app.AppointmentID);
+        cout << "[OK] Appointment added. ID=" << app.AppointmentID << " Offset=" << offset << "\n";
+        aptsPidx_.saveIndex();
+        aptsSidx_.saveIndex();
+    } else {
+        cout << "[FAIL] Appointment ID already exists.\n";
+    }
 }
 
 void Operations::handleDeleteDoctor() {
     string docId;
     cout << "Enter Doctor ID to delete: ";
     cin >> docId;
-    int getOff = pidx_.search(docId);
-    if (getOff < 0) {
-        cout << "Doctor ID not found.\n";
+    long off = drsPidx_.search(docId);
+    if (off < 0) {
+        cout << "[FAIL] Doctor ID not found.\n";
         return;
     }
-    Doctor doc = fm_.getDoctor(getOff);
-    fm_.deleteDoctor(getOff);
-    pidx_.deleteEntry(docId);
-    sidx_.deleteEntry(doc.DoctorName, docId);
-
+    Doctor doc = fm_.getDoctor((int)off);
+    fm_.deleteDoctor((int)off);
+    drsPidx_.deleteEntry(docId);
+    drsSidx_.deleteEntry(doc.DoctorName, docId);
+    drsSidx_.deleteEntry(doc.Address, docId);
+    cout << "[OK] Doctor deleted. ID=" << docId << "\n";
+    drsPidx_.saveIndex();
+    drsSidx_.saveIndex();
 }
 
 void Operations::handleDeleteAppointment() {
     string appId;
     cout << "Enter Appointment ID to delete: ";
     cin >> appId;
-    int getOff = pidx_.search(appId);
-    if (getOff < 0) {
-        cout << "Appointment ID not found.\n";
+    long off = aptsPidx_.search(appId);
+    if (off < 0) {
+        cout << "[FAIL] Appointment ID not found.\n";
         return;
     }
-    Appointment app = fm_.getAppointment(getOff);
-    fm_.deleteAppointment(getOff);
-    pidx_.deleteEntry(appId);
-    sidx_.deleteEntry(app.DoctorID, appId);
+    Appointment app = fm_.getAppointment((int)off);
+    fm_.deleteAppointment((int)off);
+    aptsPidx_.deleteEntry(appId);
+    aptsSidx_.deleteEntry(app.DoctorID, appId);
+    aptsSidx_.deleteEntry(app.AppointmentDate, appId);
+    cout << "[OK] Appointment deleted. ID=" << appId << "\n";
+    aptsPidx_.saveIndex();
+    aptsSidx_.saveIndex();
 }
 
 void Operations::handleUpdateDoctor() {
@@ -80,15 +105,19 @@ void Operations::handleUpdateDoctor() {
     cin >> id;
     cout << "Enter new Doctor Name: ";
     cin >> newName;
-    string docIdStr = to_string(id);
-    int getOff = pidx_.search(docIdStr);
-    if (getOff < 0) {
-        cout << "Doctor ID not found.\n";
-        return;
+    string key = to_string(id);
+    long off = drsPidx_.search(key);
+    if (off < 0) { cout << "[FAIL] Doctor ID not found.\n"; return; }
+    Doctor doc = fm_.getDoctor((int)off);
+    // Update secondary index if name changed
+    if (string(doc.DoctorName) != newName) {
+        drsSidx_.deleteEntry(doc.DoctorName, key);
+        copyToBuf(newName, doc.DoctorName, sizeof(doc.DoctorName));
+        drsSidx_.addEntry(doc.DoctorName, key);
     }
-    Doctor doc = fm_.getDoctor(getOff);
-    copyToBuf(newName, doc.DoctorName, sizeof(doc.DoctorName));
-    fm_.updateDoctor(getOff, doc);
+    fm_.updateDoctor((int)off, doc);
+    cout << "[OK] Doctor name updated. ID=" << key << "\n";
+    drsSidx_.saveIndex();
 }
 
 void Operations::handleUpdateAppointmentDate() {
@@ -98,29 +127,28 @@ void Operations::handleUpdateAppointmentDate() {
     cin >> appId;
     cout << "Enter new Appointment Date: ";
     cin >> newDate;
-    string appIdStr = to_string(appId);
-    int getOff = pidx_.search(appIdStr);
-    if (getOff < 0) {
-        cout << "Appointment ID not found.\n";
-        return;
+    string key = to_string(appId);
+    long off = aptsPidx_.search(key);
+    if (off < 0) { cout << "[FAIL] Appointment ID not found.\n"; return; }
+    Appointment app = fm_.getAppointment((int)off);
+    if (string(app.AppointmentDate) != newDate) {
+        aptsSidx_.deleteEntry(app.AppointmentDate, key);
+        copyToBuf(newDate, app.AppointmentDate, sizeof(app.AppointmentDate));
+        aptsSidx_.addEntry(app.AppointmentDate, key);
     }
-    Appointment app = fm_.getAppointment(getOff);
-    copyToBuf(newDate, app.AppointmentDate, sizeof(app.AppointmentDate));
-    fm_.updateAppointment(getOff, app);
-
+    fm_.updateAppointment((int)off, app);
+    cout << "[OK] Appointment date updated. ID=" << key << "\n";
+    aptsSidx_.saveIndex();
 }
 
 void Operations::handlePrintDoctor() {
     int id;
     cout << "Enter Doctor ID to print: ";
     cin >> id;
-    string docIdStr = to_string(id);
-    int getOff = pidx_.search(docIdStr);
-    if (getOff < 0) {
-        cout << "Doctor ID not found.\n";
-        return;
-    }
-    Doctor doc = fm_.getDoctor(getOff);
+    string key = to_string(id);
+    long off = drsPidx_.search(key);
+    if (off < 0) { cout << "Doctor ID not found.\n"; return; }
+    Doctor doc = fm_.getDoctor((int)off);
     cout << "DoctorID: " << doc.DoctorID << " | Name: " << doc.DoctorName << " | Address: " << doc.Address << "\n";
 }
 
@@ -128,13 +156,10 @@ void Operations::handlePrintAppointment() {
     int appId;
     cout << "Enter Appointment ID to print: ";
     cin >> appId;
-    string appIdStr = to_string(appId);
-    int getOff = pidx_.search(appIdStr);
-    if (getOff < 0) {
-        cout << "Appointment ID not found.\n";
-        return;
-    }
-    Appointment app = fm_.getAppointment(getOff);
+    string key = to_string(appId);
+    long off = aptsPidx_.search(key);
+    if (off < 0) { cout << "Appointment ID not found.\n"; return; }
+    Appointment app = fm_.getAppointment((int)off);
     cout << "AppointmentID: " << app.AppointmentID << " | Date: " << app.AppointmentDate << " | DoctorID: " << app.DoctorID << "\n";
 }
 
@@ -167,18 +192,17 @@ void Operations::copyToBuf(const string& src, char* dst, size_t dstSize) {
 //   - WHERE by secondary field (Doctor Name or Doctor ID inside Appointments, or Appointment Date) -> use SecondaryIndex
 //   - SELECT ALL prints all fields of the matched record(s); selecting a single field prints just that field.
 void Operations::handleQuery() {
-    cout << "Enter SQL-like query (e.g., Select all from Doctors where Doctor ID='D001';) or BACK to return\n> ";
+    cout << "Enter SQL-like query (e.g., Select all from Doctors where Doctor ID='123';) or BACK to return\n> ";
 
+    // Ensure we can read a full line even after numeric menu input
     if (cin.peek() == '\n') cin.get();
     string line;
     if (!getline(cin, line)) return;
     line = trim(line);
     if (line.empty() || upper(line) == "BACK") return;
 
-    // Normalize spacing and split into clauses: SELECT ... FROM ... WHERE ... ;
-    // We'll find keywords case-insensitively.
+    // Case-insensitive search helpers
     string u = upper(line);
-
     auto findKw = [&](const string& kw) { return u.find(kw); };
 
     size_t selPos = findKw("SELECT ");
@@ -201,143 +225,158 @@ void Operations::handleQuery() {
         wherePart = trim(line.substr(wherePos + 7));
     }
 
-    // Remove trailing semicolon from where/table if present
+    // Remove trailing semicolon
     if (!wherePart.empty() && wherePart.back() == ';') wherePart.pop_back();
     if (!tablePart.empty() && tablePart.back() == ';') tablePart.pop_back();
 
-    // Determine table
+    // Validate table
     string tableU = upper(tablePart);
-    bool isDoctors = tableU == "DOCTORS";
-    bool isAppointments = tableU == "APPOINTMENTS";
+    bool isDoctors = (tableU == "DOCTORS");
+    bool isAppointments = (tableU == "APPOINTMENTS");
     if (!isDoctors && !isAppointments) {
         cout << "Unknown table: " << tablePart << " (expected Doctors or Appointments)\n";
         return;
     }
 
-    // Parse WHERE: <Field Name>='value'
+    // Parse WHERE: <Field Name>='value' (quotes optional)
     string fieldName;
     string value;
     if (!wherePart.empty()) {
-        auto eqPos = wherePart.find('=');
+        // Normalize spaces around '=' to avoid parsing issues
+        // e.g., "Doctor ID =  1" -> "Doctor ID=1"
+        string normalizedWhere;
+        normalizedWhere.reserve(wherePart.size());
+        bool seenEq = false;
+        for (size_t i = 0; i < wherePart.size(); ++i) {
+            char c = wherePart[i];
+            if (!seenEq && c == '=') {
+                normalizedWhere.push_back('=');
+                seenEq = true;
+            } else if (!seenEq && isspace(static_cast<unsigned char>(c))) {
+                // skip extra spaces before '='
+            } else {
+                normalizedWhere.push_back(c);
+            }
+        }
+        auto eqPos = normalizedWhere.find('=');
         if (eqPos == string::npos) {
-            cout << "Syntax error in WHERE clause (expected = )\n";
+            cout << "Syntax error in WHERE clause (expected =)\n";
             return;
         }
-        fieldName = trim(wherePart.substr(0, eqPos));
-        string rhs = trim(wherePart.substr(eqPos + 1));
-        // Expect quoted value '...'
-        if (rhs.size() >= 2 && rhs.front() == '\'' && rhs.back() == '\'') {
+        fieldName = trim(normalizedWhere.substr(0, eqPos));
+        string rhs = trim(normalizedWhere.substr(eqPos + 1));
+        if (!rhs.empty() && rhs.front() == '\'' && rhs.back() == '\'' && rhs.size() >= 2) {
             value = rhs.substr(1, rhs.size() - 2);
         } else {
-            // Allow without quotes as a fallback
-            value = rhs;
+            value = trim(rhs);
         }
+    } else {
+        cout << "Syntax error: missing WHERE clause\n";
+        return;
     }
 
-    // Helper lambdas to print records
-    auto printDoctor = [&](const Doctor& d, bool all, const string& selFieldU) {
-        if (all) {
-            cout << "DoctorID: " << d.DoctorID << " | Name: " << d.DoctorName << " | Address: " << d.Address << "\n";
-            return;
-        }
-        if (selFieldU == "DOCTOR NAME") {
-            cout << d.DoctorName << "\n";
-        } else if (selFieldU == "DOCTOR ID") {
-            cout << d.DoctorID << "\n";
-        } else if (selFieldU == "ADDRESS") {
-            cout << d.Address << "\n";
-        } else {
-            cout << "Unknown field in SELECT for Doctors: " << selFieldU << "\n";
-        }
-    };
-
-    auto printAppointment = [&](const Appointment& a, bool all, const string& selFieldU) {
-        if (all) {
-            cout << "AppointmentID: " << a.AppointmentID << " | Date: " << a.AppointmentDate << " | DoctorID: " << a.DoctorID << "\n";
-            return;
-        }
-        if (selFieldU == "APPOINTMENT ID") {
-            cout << a.AppointmentID << "\n";
-        } else if (selFieldU == "APPOINTMENT DATE") {
-            cout << a.AppointmentDate << "\n";
-        } else if (selFieldU == "DOCTOR ID") {
-            cout << a.DoctorID << "\n";
-        } else {
-            cout << "Unknown field in SELECT for Appointments: " << selFieldU << "\n";
-        }
-    };
-
-    // Interpret SELECT
+    // SELECT interpretation
     string selectU = upper(selectPart);
     bool selectAll = (selectU == "ALL");
 
-    // Dispatch by where field and table
-    if (isDoctors) {
-        // WHERE possibilities: Doctor ID, Doctor Name, Address
-        string fieldU = upper(fieldName);
-        if (fieldU.empty()) {
-            cout << "WHERE clause is required to limit results in this stub version.\n";
-            return;
+    auto printDoctor = [&](const Doctor& d) {
+        if (selectAll) {
+            cout << "DoctorID: " << d.DoctorID << " | Name: " << d.DoctorName << " | Address: " << d.Address << "\n";
+        } else if (selectU == "DOCTOR NAME") {
+            cout << d.DoctorName << "\n";
+        } else if (selectU == "DOCTOR ID") {
+            cout << d.DoctorID << "\n";
+        } else if (selectU == "ADDRESS") {
+            cout << d.Address << "\n";
+        } else {
+            cout << "Unknown field in SELECT for Doctors: " << selectPart << "\n";
         }
-        if (fieldU == "DOCTOR ID") {
-            // primary index path: search primary by key, then fetch doctor
-            int rrn = pidx_.search(value);
-            if (rrn < 0) {
+    };
+
+    auto printAppointment = [&](const Appointment& a) {
+        if (selectAll) {
+            cout << "AppointmentID: " << a.AppointmentID << " | Date: " << a.AppointmentDate << " | DoctorID: " << a.DoctorID << "\n";
+        } else if (selectU == "APPOINTMENT ID") {
+            cout << a.AppointmentID << "\n";
+        } else if (selectU == "APPOINTMENT DATE") {
+            cout << a.AppointmentDate << "\n";
+        } else if (selectU == "DOCTOR ID") {
+            cout << a.DoctorID << "\n";
+        } else {
+            cout << "Unknown field in SELECT for Appointments: " << selectPart << "\n";
+        }
+    };
+
+    // Dispatch by table and WHERE field
+    auto normalizeField = [](string f) {
+        f = upper(trim(f));
+        string out; out.reserve(f.size());
+        for (char c : f) {
+            if (!isspace(static_cast<unsigned char>(c))) out.push_back(c);
+        }
+        return out;
+    };
+
+    string fieldN = normalizeField(fieldName);
+    size_t printed = 0;
+
+    if (isDoctors) {
+        if (fieldN == "DOCTORID") {
+            // Primary key lookup via PrimaryIndex
+            long offset = drsPidx_.search(value);
+            if (offset < 0) {
                 cout << "No doctor with ID '" << value << "'\n";
-                return;
+            } else {
+                Doctor d = fm_.getDoctor((int)offset);
+                printDoctor(d);
+                printed++;
             }
-            Doctor d = fm_.getDoctor(rrn);
-            printDoctor(d, selectAll, selectU);
-        } else if (fieldU == "DOCTOR NAME" || fieldU == "ADDRESS") {
-            // secondary index path (stub): search secondary -> list of primary keys
-            vector<string> keys = sidx_.search(value);
+        } else if (fieldN == "DOCTORNAME" || fieldN == "ADDRESS") {
+            // Secondary key lookup via SecondaryIndex -> returns list of primary keys
+            vector<string> keys = drsSidx_.search(value);
             if (keys.empty()) {
                 cout << "No matching doctors found.\n";
-                return;
-            }
-            for (const auto& k : keys) {
-                int rrn = pidx_.search(k); // map key to RRN via primary index (stub)
-                if (rrn >= 0) {
-                    Doctor d = fm_.getDoctor(rrn);
-                    printDoctor(d, selectAll, selectU);
+            } else {
+                for (const string& k : keys) {
+                    long offset = drsPidx_.search(k);
+                    if (offset >= 0) {
+                        Doctor d = fm_.getDoctor((int)offset);
+                        printDoctor(d);
+                        printed++;
+                    }
                 }
+                if (printed == 0) cout << "No matching doctors found in primary index.\n";
             }
         } else {
             cout << "Unsupported WHERE field for Doctors: " << fieldName << "\n";
-            return;
         }
     } else if (isAppointments) {
-        // WHERE possibilities: Appointment ID, Appointment Date, Doctor ID
-        string fieldU = upper(fieldName);
-        if (fieldU.empty()) {
-            cout << "WHERE clause is required to limit results in this stub version.\n";
-            return;
-        }
-        if (fieldU == "APPOINTMENT ID") {
-            int rrn = pidx_.search(value);
-            if (rrn < 0) {
+        if (fieldN == "APPOINTMENTID") {
+            long offset = aptsPidx_.search(value);
+            if (offset < 0) {
                 cout << "No appointment with ID '" << value << "'\n";
-                return;
+            } else {
+                Appointment a = fm_.getAppointment((int)offset);
+                printAppointment(a);
+                printed++;
             }
-            Appointment a = fm_.getAppointment(rrn);
-            printAppointment(a, selectAll, selectU);
-        } else if (fieldU == "DOCTOR ID" || fieldU == "APPOINTMENT DATE") {
-            // secondary index path: search secondary -> list of appointment primary keys
-            vector<string> keys = sidx_.search(value);
+        } else if (fieldN == "DOCTORID" || fieldN == "APPOINTMENTDATE") {
+            vector<string> keys = aptsSidx_.search(value);
             if (keys.empty()) {
                 cout << "No matching appointments found.\n";
-                return;
-            }
-            for (const auto& k : keys) {
-                int rrn = pidx_.search(k);
-                if (rrn >= 0) {
-                    Appointment a = fm_.getAppointment(rrn);
-                    printAppointment(a, selectAll, selectU);
+            } else {
+                for (const string& k : keys) {
+                    long offset = aptsPidx_.search(k);
+                    if (offset >= 0) {
+                        Appointment a = fm_.getAppointment((int)offset);
+                        printAppointment(a);
+                        printed++;
+                    }
                 }
+                if (printed == 0) cout << "No matching appointments found in primary index.\n";
             }
         } else {
             cout << "Unsupported WHERE field for Appointments: " << fieldName << "\n";
-            return;
         }
     }
 }

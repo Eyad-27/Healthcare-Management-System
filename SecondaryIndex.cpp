@@ -28,8 +28,8 @@ void SecondaryIndex::loadIndex(const string& filename) {
 
     ifstream file(filename);
     if (!file.is_open()) {
-        ofstream newFile(filename);
-        newFile.close();
+        // ofstream newFile(filename);
+        // newFile.close();
         return;
     }
 

@@ -1,7 +1,7 @@
 #include "PrimaryIndex.h"
 
 //--------------------------------------------------------
-// Constructor — loads existing index file
+// Constructor loads existing index file
 //--------------------------------------------------------
 PrimaryIndex::PrimaryIndex(const string& filename)
     : indexFilename(filename) {
@@ -87,9 +87,17 @@ long PrimaryIndex::search(const string& key) {
 bool PrimaryIndex::addEntry(const string& key, long offset) {
     // Check if already exists
     int pos = binarySearch(key);
-    if (pos != -1 && !index[pos].deleted)
-        return false; // duplicate
+    if (pos != -1) {
+        if (!index[pos].deleted) {
+            return false; // active duplicate - reject
+        }
+        // Reuse deleted entry
+        index[pos].offset = offset;
+        index[pos].deleted = false;
+        return true;
+    }
 
+    // Add new entry
     index.push_back({key, offset, false});
 
     // Keep index sorted

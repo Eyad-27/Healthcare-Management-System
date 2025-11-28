@@ -24,13 +24,19 @@ static void displayMenu() {
 
 int main() {
     FileManager fileManager;
-    PrimaryIndex primaryIndex;
-    SecondaryIndex secondaryIndex;
-    Operations ops(fileManager, primaryIndex, secondaryIndex);
 
-    fileManager.open("Doctors.dat", "Appointments.dat");
-     primaryIndex.loadIndex("primary.idx");
-     secondaryIndex.loadIndex("secondary.idx");
+    // Separate indices per table
+    PrimaryIndex drsPrimIdx("doctors_primary.txt");     // loads in ctor if file exists
+    PrimaryIndex aptsPrimIdx("appointments_primary.txt");
+
+    SecondaryIndex drsSecIdx("doctors_secondary.txt");  // loads in ctor if file exists
+    SecondaryIndex aptsSecIdx("appointments_secondary.txt");
+
+    Operations ops(fileManager, drsPrimIdx, aptsPrimIdx, drsSecIdx, aptsSecIdx);
+
+    // Open data files
+    fileManager.open("Doctors.txt", "Appointments.txt");
+
     bool running = true;
     while (running) {
         displayMenu();
@@ -41,34 +47,35 @@ int main() {
             cout << "Invalid input. Please enter a number.\n";
             continue;
         }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         switch (choice) {
             case 1:
-                 ops.handleAddNewDoctor();
+                ops.handleAddNewDoctor();
                 break;
             case 2:
-                 ops.handleAddNewAppointment();
+                ops.handleAddNewAppointment();
                 break;
             case 3:
-                 ops.handleUpdateDoctor();
+                ops.handleUpdateDoctor();
                 break;
             case 4:
-                 ops.handleUpdateAppointmentDate();
+                ops.handleUpdateAppointmentDate();
                 break;
             case 5:
-                 ops.handleDeleteAppointment();
+                ops.handleDeleteAppointment();
                 break;
             case 6:
-                 ops.handleDeleteDoctor();
+                ops.handleDeleteDoctor();
                 break;
             case 7:
-                 ops.handlePrintDoctor();
+                ops.handlePrintDoctor();
                 break;
             case 8:
-                 ops.handlePrintAppointment();
+                ops.handlePrintAppointment();
                 break;
             case 9:
-                 ops.handleQuery();
+                ops.handleQuery();
                 break;
             case 10:
                 running = false;
@@ -80,8 +87,12 @@ int main() {
         }
     }
 
-    primaryIndex.saveIndex();
-    secondaryIndex.saveIndex();
+    // Save indices on exit (also saved after each mutation in Operations)
+    drsPrimIdx.saveIndex();
+    aptsPrimIdx.saveIndex();
+    drsSecIdx.saveIndex();
+    aptsSecIdx.saveIndex();
+
     fileManager.close();
     return 0;
 }
