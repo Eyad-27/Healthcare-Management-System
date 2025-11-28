@@ -3,7 +3,6 @@ using namespace std;
 
 #include "Operations.h"
 
-// TODO: Team Member 4 (CRUD Logic) to implement non-query handlers.
 
 Operations::Operations(FileManager& fm, PrimaryIndex& pidx, SecondaryIndex& sidx)
     : fm_(fm), pidx_(pidx), sidx_(sidx) {}
@@ -165,7 +164,7 @@ void Operations::copyToBuf(const string& src, char* dst, size_t dstSize) {
 //   Appointments: Appointment ID, Appointment Date, Doctor ID
 // Linking to stubs:
 //   - WHERE by primary key (Doctor ID or Appointment ID) -> use PrimaryIndex::search(key) then FileManager::get...
-//   - WHERE by secondary field (Doctor Name or Doctor ID inside Appointments, or Appointment Date) -> use SecondaryIndex stubs
+//   - WHERE by secondary field (Doctor Name or Doctor ID inside Appointments, or Appointment Date) -> use SecondaryIndex
 //   - SELECT ALL prints all fields of the matched record(s); selecting a single field prints just that field.
 void Operations::handleQuery() {
     cout << "Enter SQL-like query (e.g., Select all from Doctors where Doctor ID='D001';) or BACK to return\n> ";

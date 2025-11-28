@@ -23,16 +23,14 @@ static void displayMenu() {
 }
 
 int main() {
-    // Create instances
     FileManager fileManager;
     PrimaryIndex primaryIndex;
     SecondaryIndex secondaryIndex;
     Operations ops(fileManager, primaryIndex, secondaryIndex);
 
-    // Optionally open files / load indices (left for team members to implement)
     fileManager.open("Doctors.dat", "Appointments.dat");
-    // primaryIndex.loadIndex("primary.idx");
-    // secondaryIndex.loadIndex("secondary.idx");
+     primaryIndex.loadIndex("primary.idx");
+     secondaryIndex.loadIndex("secondary.idx");
     bool running = true;
     while (running) {
         displayMenu();
@@ -52,25 +50,25 @@ int main() {
                  ops.handleAddNewAppointment();
                 break;
             case 3:
-                // ops.handleUpdateDoctor();
+                 ops.handleUpdateDoctor();
                 break;
             case 4:
-                // ops.handleUpdateAppointmentDate();
+                 ops.handleUpdateAppointmentDate();
                 break;
             case 5:
-                // ops.handleDeleteAppointment();
+                 ops.handleDeleteAppointment();
                 break;
             case 6:
-                // ops.handleDeleteDoctor();
+                 ops.handleDeleteDoctor();
                 break;
             case 7:
-                // ops.handlePrintDoctor();
+                 ops.handlePrintDoctor();
                 break;
             case 8:
-                // ops.handlePrintAppointment();
+                 ops.handlePrintAppointment();
                 break;
             case 9:
-                // ops.handleQuery();
+                 ops.handleQuery();
                 break;
             case 10:
                 running = false;
@@ -82,6 +80,8 @@ int main() {
         }
     }
 
+    primaryIndex.saveIndex();
+    secondaryIndex.saveIndex();
     fileManager.close();
     return 0;
 }
